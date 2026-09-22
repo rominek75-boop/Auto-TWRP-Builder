@@ -1,4 +1,4 @@
-name: Recovery Build Legacy (Oukitel WP12)
+name: Recovery Build
 
 on:
   workflow_dispatch:
@@ -34,10 +34,18 @@ on:
 
 jobs:
   build:
-  
     runs-on: ubuntu-20.04
     steps:
-    - name: Checkout
-      uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v3
 
-    # Zde automaticky bezi skripty kompilace, ktere pouzivaji vyse zadane vychozi hodnoty.
+      - name: Run TWRP Builder
+        uses: NoahDomingues/Auto-TWRP-Builder@main
+        with:
+          MANIFEST_URL: ${{ github.event.inputs.MANIFEST_URL }}
+          MANIFEST_BRANCH: ${{ github.event.inputs.MANIFEST_BRANCH }}
+          DEVICE_TREE_URL: ${{ github.event.inputs.DEVICE_TREE_URL }}
+          DEVICE_PATH: ${{ github.event.inputs.DEVICE_PATH }}
+          DEVICE_NAME: ${{ github.event.inputs.DEVICE_NAME }}
+          MAKEFILE_NAME: ${{ github.event.inputs.MAKEFILE_NAME }}
+          BUILD_TARGET: ${{ github.event.inputs.BUILD_TARGET }}
