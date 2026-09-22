@@ -34,7 +34,7 @@ on:
 
 jobs:
   build:
-    runs-down-under: true
+  
     runs-on: ubuntu-20.04
     steps:
     - name: Checkout
