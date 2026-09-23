@@ -1,52 +1,36 @@
-name: Recovery Build
-permissions:
-  contents: write
+name: Build TWRP Recovery
 on:
   workflow_dispatch:
-    inputs:
-      MANIFEST_URL:
-        description: 'Manifest URL'
-        required: true
-        default: 'https://github.com'
-      MANIFEST_BRANCH:
-        description: 'Manifest Branch'
-        required: true
-        default: 'twrp-11'
-      DEVICE_TREE_URL:
-        description: 'Odkaz na vas boot.img'
-        required: true
-        default: 'https://github.com/rominek75-boop/wp12-twrp-tree.git'
-      DEVICE_PATH:
-        description: 'Device Path'
-        required: true
-        default: 'device/oukitel/WP12'
-      DEVICE_NAME:
-        description: 'Device Name'
-        required: true
-        default: 'WP12'
-      MAKEFILE_NAME:
-        description: 'Makefile Name'
-        required: true
-        default: 'twrp_WP12'
-      BUILD_TARGET:
-        description: 'Build Target'
-        required: true
-        default: 'bootimage'
-
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Run TWRP Builder
-        uses: NoahDomingues/Auto-TWRP-Builder@main
-        with:
-          MANIFEST_URL: ${{ github.event.inputs.MANIFEST_URL }}
-          MANIFEST_BRANCH: ${{ github.event.inputs.MANIFEST_BRANCH }}
-          DEVICE_TREE_URL: ${{ github.event.inputs.DEVICE_TREE_URL }}
-          DEVICE_PATH: ${{ github.event.inputs.DEVICE_PATH }}
-          DEVICE_NAME: ${{ github.event.inputs.DEVICE_NAME }}
-          MAKEFILE_NAME: ${{ github.event.inputs.MAKEFILE_NAME }}
-          BUILD_TARGET: ${{ github.event.inputs.BUILD_TARGET }}
+    - name: Checkout Code
+      uses: actions/checkout@v4
+    - name: Set up Build Environment
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y bc bison build-essential ccache curl flex g++-multilib gcc-multilib git gnupg gperf imagemagick lib32readline-dev lib32z1-dev liblz4-tool libncurses5-dev libsdl1.2-dev libssl-dev libxml2 libxml2-utils lzop pngcrush rsync schedtool squashfs-tools xsltproc zip zlib1g-dev python3
+    - name: Download TWRP Minimal Manifest
+      run: |
+        mkdir twrp-workspace && cd twrp-workspace
+        git config --global user.name "GitHub Action"
+        git config --global user.email "action@github.com"
+        repo init --depth=1 -u https://github.com -b twrp-11
+        repo sync -c -j$(nproc) --no-clone-bundle --no-tags
+    - name: Clone Device Tree
+      run: |
+        mkdir -p twrp-workspace/device/oukitel/wp12
+        cp -r * twrp-workspace/device/oukitel/wp12/ 2>/dev/null || true
+    - name: Run Compilation
+      run: |
+        cd twrp-workspace
+        export ALLOW_MISSING_DEPENDENCIES=true
+        . build/envsetup.sh
+        lunch twrp_wp12-eng || lunch omni_wp12-eng
+        mka recoveryimage -j$(nproc)
+    - name: Upload TWRP Image
+      uses: actions/upload-artifact@v4
+      with:
+        name: TWRP-Oukitel-WP12
+        path: twrp-workspace/out/target/product/wp12/*.img
